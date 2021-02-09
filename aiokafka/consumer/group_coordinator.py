@@ -679,8 +679,15 @@ class GroupCoordinator(BaseCoordinator):
         # handling.
         await self._stop_heartbeat_task()
 
-        # We will not attempt rejoin if there is no activity on consumer
-        idle_time = self._subscription.fetcher_idle_time
+        if self._subscription.assigned_partitions():
+            # We will not attempt rejoin if there is no activity on consumer,
+            # and there are topics assigned.
+            idle_time = self._subscription.fetcher_idle_time
+        else:
+            # There are no topics assigned so the fetcher is always idle.
+            # Rejoin the group if possible.
+            idle_time = 0
+
         if idle_time >= self._max_poll_interval:
             await asyncio.sleep(self._retry_backoff_ms / 1000)
             return None
@@ -747,9 +754,15 @@ class GroupCoordinator(BaseCoordinator):
                     "Heartbeat session expired - marking coordinator dead")
                 self.coordinator_dead()
 
-            # If consumer is idle (no records consumed) for too long we need
-            # to leave the group
-            idle_time = self._subscription.fetcher_idle_time
+            if self._subscription.assigned_partitions():
+                # If consumer is idle (no records consumed) for too long we need
+                # to leave the group
+                idle_time = self._subscription.fetcher_idle_time
+            else:
+                # There are no partitions assigned so the fetcher is always idle.
+                # Remain in the group so that future rebalances will include this client.
+                idle_time = 0
+
             if idle_time < self._max_poll_interval:
                 sleep_time = min(
                     sleep_time,
