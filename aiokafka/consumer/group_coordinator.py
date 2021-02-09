@@ -679,9 +679,10 @@ class GroupCoordinator(BaseCoordinator):
         # handling.
         await self._stop_heartbeat_task()
 
-        # We will not attempt rejoin if there is no activity on consumer
+        # We will not attempt rejoin if there is no activity on consumer,
+        # and there are topics assigned.
         idle_time = self._subscription.fetcher_idle_time
-        if idle_time >= self._max_poll_interval:
+        if idle_time >= self._max_poll_interval and subscription.topics:
             await asyncio.sleep(self._retry_backoff_ms / 1000)
             return None
 
@@ -748,9 +749,9 @@ class GroupCoordinator(BaseCoordinator):
                 self.coordinator_dead()
 
             # If consumer is idle (no records consumed) for too long we need
-            # to leave the group
+            # to leave the group, unless there are no topics assigned.
             idle_time = self._subscription.fetcher_idle_time
-            if idle_time < self._max_poll_interval:
+            if idle_time < self._max_poll_interval or not self._subscription.topics:
                 sleep_time = min(
                     sleep_time,
                     self._max_poll_interval - idle_time)

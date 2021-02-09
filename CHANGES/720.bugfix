@@ -1,0 +1,2 @@
+Change group coordinator to not leave the Consumer Group when the fetcher is idle because
+there are no partitions assigned.
