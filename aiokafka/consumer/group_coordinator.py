@@ -679,9 +679,10 @@ class GroupCoordinator(BaseCoordinator):
         # handling.
         await self._stop_heartbeat_task()
 
-        # We will not attempt rejoin if there is no activity on consumer
+        # We will not attempt rejoin if there is no activity on consumer,
+        # and there are topics assigned.
         idle_time = self._subscription.fetcher_idle_time
-        if idle_time >= self._max_poll_interval:
+        if idle_time >= self._max_poll_interval and subscription.topics:
             await asyncio.sleep(self._retry_backoff_ms / 1000)
             return None
 
